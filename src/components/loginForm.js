@@ -1,24 +1,43 @@
 import React, {Component} from 'react';
 import firebase from 'firebase';
 import { Text }from 'react-native'
-import { Button, Card, CardSection, Input } from './common';
+import { Button, Card, CardSection, Input, Spinner } from './common';
 
 class LoginForm extends Component {
-    state = { 
-        email: '',
-        password: '',
-        error: ''
-    };
+    
+    state = this.setInitialState();
+
+    setInitialState () {
+        return ( {
+            email: '',
+            password: '',
+            error: '',
+            loading: false
+        })
+    }
 
     onButtonPress(){
         const { email, password } = this.state 
+        this.setState({ error: '', loading: true })
         firebase.auth().signInWithEmailAndPassword(email, password)
+            .then(this.onLogingSuccess.bind(this))
             .catch(() => { // If the sign in fails => attemp to create an account 
                 firebase.auth().createUserWithEmailAndPassword(email, password)
-                    .catch(() => { // If account creation fails then we show an error
-                        this.setState({error: 'Authentication failed'})
-                    });
+                    .then(this.onLogingSuccess.bind(this))
+                    .catch(this.onLoginFail.bind(this));
             });
+    }
+
+    onLogingSuccess(){
+        this.setState(this.setInitialState())
+    }
+
+    onLoginFail(){
+        this.setState({ error: 'Authenication Failed', loading :false })
+    }
+
+    renderButton() {
+        return ( this.state.loading ? <Spinner size='small' /> : <Button onPress={this.onButtonPress.bind(this)} buttonText= 'Sign In'/> );
     }
 
     render() {
@@ -39,7 +58,7 @@ class LoginForm extends Component {
                         label="Password"
                         value={this.state.password}
                         onChangeText={password => this.setState({ password })}
-                        placeholder='**********'
+                        placeholder='Password'
                     />
                 </CardSection>
 
@@ -48,9 +67,7 @@ class LoginForm extends Component {
                 </Text>
                 
                 <CardSection>
-                    <Button onPress={this.onButtonPress.bind(this)}>
-                        Log In
-                    </Button>
+                    {this.renderButton()}
                 </CardSection>
             </Card>
         );
